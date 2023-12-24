@@ -1,4 +1,7 @@
+import os
+
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import EmailMessage
 from django.utils.encoding import force_bytes, smart_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -34,3 +37,15 @@ class Encoding:
 
     def decode(self):
         return smart_str(urlsafe_base64_decode(self.data))
+
+
+class SendEmail:
+    @staticmethod
+    def send_email(data):
+        email = EmailMessage(
+            subject=data['subject'],
+            body=data['body'],
+            from_email=os.getenv('EMAIL_FROM'),
+            to=[data['to_email']]
+        )
+        email.send()

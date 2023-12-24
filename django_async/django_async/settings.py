@@ -11,34 +11,23 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from datetime import timedelta
-from os import path
 from pathlib import Path
 
-import dotenv
 from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-dotenv_file = BASE_DIR / '.env.local'
-
-if path.isfile(dotenv_file):
-    dotenv.load_dotenv(dotenv_file)
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = "django-insecure-9a5yl&2iv#p5bds24aw060+fnd(!u1ch1x#^)r18ros@^c_zxj"
-
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', get_random_secret_key())
 # SECURITY WARNING: don't run with debug turned on in production!
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-# DEBUG = True
 
-# ALLOWED_HOSTS = []
 ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 # Application definition
@@ -102,14 +91,22 @@ DATABASES = {
 
 # Email Settings
 
-EMAIL_BACKEND = 'django_ses.SESBackend'
-DEFAULT_FROM_EMAIL = os.getenv('AWS_SES_FROM_EMAIL')
-AWS_SES_ACCESS_KEY_ID = os.getenv('AWS_SES_ACCESS_KEY_ID')
-AWS_SES_SECRET_ACCESS_KEY = os.getenv('AWS_SES_SECRET_ACCESS_KEY')
-AWS_SES_REGION_NAME = os.getenv('AWS_SES_REGION_NAME')
-AWS_SES_REGION_ENDPOINT = f'email.{AWS_SES_REGION_NAME}.amazonaws.com'
-AWS_SES_FROM_EMAIL = os.getenv('AWS_SES_FROM_EMAIL')
-USE_SES_v2 = True
+# EMAIL_BACKEND = 'django_ses.SESBackend'
+# DEFAULT_FROM_EMAIL = os.getenv('AWS_SES_FROM_EMAIL')
+# AWS_SES_ACCESS_KEY_ID = os.getenv('AWS_SES_ACCESS_KEY_ID')
+# AWS_SES_SECRET_ACCESS_KEY = os.getenv('AWS_SES_SECRET_ACCESS_KEY')
+# AWS_SES_REGION_NAME = os.getenv('AWS_SES_REGION_NAME')
+# AWS_SES_REGION_ENDPOINT = f'email.{AWS_SES_REGION_NAME}.amazonaws.com'
+# AWS_SES_FROM_EMAIL = os.getenv('AWS_SES_FROM_EMAIL')
+# USE_SES_v2 = True
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = os.getenv('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASS')
+EMAIL_USE_TLS = True
+EMAIL_FROM = os.getenv('EMAIL_FROM')
 
 AUTH_USER_MODEL = "userauth.User"
 
@@ -167,6 +164,8 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": False,
 }
 
+# Djoser settings
+
 # DJOSER = {
 #     'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
 #     'ACTIVATION_URL': 'activate/{uid}/{token}',
@@ -176,9 +175,9 @@ SIMPLE_JWT = {
 #     'TOKEN_MODEL': None
 # }
 
+PASSWORD_RESET_TIMEOUT = 900
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
-
-

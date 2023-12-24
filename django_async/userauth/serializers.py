@@ -1,8 +1,9 @@
 from django.utils.encoding import DjangoUnicodeDecodeError
 from rest_framework import serializers
 
+from userauth.enums import AuthEnums
 from userauth.models import User
-from userauth.utility import Encoding, Token
+from userauth.utility import Encoding, Token, SendEmail
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -18,7 +19,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         password2 = attrs.get("password2")
         if password != password2:
             raise serializers.ValidationError(
-                "Password and Confirm Password Doesn't Match"
+                AuthEnums.PASSWORD_DOES_NOT_MATCH.value
             )
         return super().validate(attrs)
 
@@ -46,7 +47,7 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         password2 = attrs.get("password2")
         if password != password2:
             raise serializers.ValidationError(
-                "Password and Confirm Password do not match"
+                AuthEnums.PASSWORD_DOES_NOT_MATCH.value
             )
         user = self._context.get('user')
         user.set_password(password)
@@ -63,15 +64,27 @@ class SendPasswordResetEmailSerializer(serializers.Serializer):
         user_queryset = User.objects.filter(email=email)
 
         if not user_queryset.exists():
-            raise serializers.ValidationError("You are not a registered User")
+            raise serializers.ValidationError(AuthEnums.NOT_REGISTERED.value)
 
         user = user_queryset.first()
 
         uid = Encoding(user.id).encode()
-        print("Encoded UId", uid)
+
         token = Token(user).generate_token()
-        link = f'http://localhost:8000/auth/password-reset?uid=' + uid + '&token=' + token
-        print("Password reset Link", link)
+
+        link = f'http://localhost:8000/auth/password-reset/?uid=' + uid + '&token=' + token
+
+        # Send Email
+        body = f'{AuthEnums.PASSWORD_RESET_MSG.value} {link}'
+        data = {
+            "subject": "Reset Your Password",
+            "body": body,
+            "to_email": user.email
+        }
+        try:
+            SendEmail.send_email(data)
+        except Exception as err:
+            raise serializers.ValidationError(AuthEnums.EMAIL_ERROR.value)
         return attrs
 
 
@@ -89,21 +102,22 @@ class PasswordResetSerializer(serializers.Serializer):
 
             if password != password2:
                 raise serializers.ValidationError(
-                    "Password and Confirm Password do not match"
+                    AuthEnums.PASSWORD_DOES_NOT_MATCH.value
                 )
             uid = self._context.get('uid')
             token = self._context.get('token')
             id = Encoding(uid).decode()
 
             user = User.objects.filter(id=id).first()
+
             if not Token(user).check_user_token(token):
-                raise serializers.ValidationError("Token is not valid or expired")
+                raise serializers.ValidationError(AuthEnums.TOKEN_INVALID_EXPIRED.value)
 
             user.set_password(password)
             user.save()
             return attrs
         except DjangoUnicodeDecodeError as identifiers:
-            raise serializers.ValidationError("Token is not valid or expired")
+            raise serializers.ValidationError(AuthEnums.TOKEN_INVALID_EXPIRED.value)
 
 
 class ProfileSerializer(serializers.ModelSerializer):

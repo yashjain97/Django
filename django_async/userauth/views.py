@@ -4,6 +4,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from userauth.enums import AuthEnums
 from userauth.serializers import (
     RegistrationSerializer,
     LoginSerializer,
@@ -22,10 +23,10 @@ class RegisterView(GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
-            token = Token.get_tokens_for_user(user)
+            token = Token(user).get_tokens_for_user()
 
             return Response(
-                {"token": token, "msg": "Registration Successfull"},
+                {"token": token, "msg": AuthEnums.REGISTRATION_SUCCESS.value},
                 status=status.HTTP_201_CREATED,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -44,11 +45,11 @@ class LoginView(GenericAPIView):
             if user:
                 token = Token(user).get_tokens_for_user()
                 return Response(
-                    {"token": token, "msg": "Login Success"}, status=status.HTTP_200_OK
+                    {"token": token, "msg": AuthEnums.LOGIN_SUCCESS.value}, status=status.HTTP_200_OK
                 )
             else:
                 return Response(
-                    {"msg": "Unauthorised User"}, status=status.HTTP_401_UNAUTHORIZED
+                    {"msg": AuthEnums.UNAUTHORISED_USER.value}, status=status.HTTP_401_UNAUTHORIZED
                 )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -61,7 +62,7 @@ class ChangePasswordView(GenericAPIView):
         serializer = self.serializer_class(data=request.data, context={"user": request.user})
         if serializer.is_valid(raise_exception=True):
             return Response(
-                {"msg": "Password Changed Successfully"}, status=status.HTTP_200_OK
+                {"msg": AuthEnums.PASSWORD_CHANGE_SUCCESS.value}, status=status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -73,7 +74,7 @@ class SendPasswordResetEmailView(GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid(raise_exception=True):
             email = serializer.data.get("email")
-            return Response({"msg": f"Password reset link sent to {email}"}, status=status.HTTP_200_OK)
+            return Response({"msg": f"{AuthEnums.PASSWORD_RESET_LINK_MSG.value} {email}"}, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -87,7 +88,7 @@ class ResetPasswordView(GenericAPIView):
 
         serializer = self.serializer_class(data=request.data, context={'uid': uid, 'token': token})
         if serializer.is_valid(raise_exception=True):
-            return Response({"msg": "PasswordResetSuccessfully"}, status=status.HTTP_200_OK)
+            return Response({"msg": AuthEnums.PASSWORD_RESET_SUCCESS.value}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
